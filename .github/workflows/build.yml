@@ -7,16 +7,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Find the project (newest ZIP, or unpacked sources)
+      - name: Find and unzip the project
         run: |
-          zip=$(ls PhotoRecovery_Pro_*.zip 2>/dev/null | sort -V | tail -n 1)
-          if [ -n "$zip" ]; then
-            echo "Building $zip"
-            rm -rf build_src && unzip -q "$zip" -d build_src
-            echo "PROJECT=build_src/PhotoRecovery" >> "$GITHUB_ENV"
-          else
-            echo "PROJECT=." >> "$GITHUB_ENV"
+          echo "Files in repository:"
+          find . -path ./.git -prune -o -type f -print
+          zip=$(find . -iname '*photo*recovery*.zip' -printf '%f\t%p\n' | sort -V | tail -n 1 | cut -f2)
+          if [ -z "$zip" ]; then
+            echo "::error::No PhotoRecovery ZIP file in the repository. Upload it first."
+            exit 1
           fi
+          echo "Building $zip"
+          unzip -q "$zip" -d "$RUNNER_TEMP/src"
+          settings=$(find "$RUNNER_TEMP/src" -name settings.gradle.kts | head -n 1)
+          if [ -z "$settings" ]; then
+            echo "::error::The ZIP has no settings.gradle.kts"
+            exit 1
+          fi
+          echo "PROJECT=$(dirname "$settings")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -24,7 +31,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Prepare signing key (optional)
+      - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -35,10 +42,9 @@ jobs:
             echo "::warning::No signing secrets, using a temporary debug key"
           fi
       - name: Test and build
-        working-directory: ${{ env.PROJECT }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: gradle test assembleRelease --stacktrace
+        run: gradle -p "$PROJECT" test assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: PhotoRecovery-Pro-APK
