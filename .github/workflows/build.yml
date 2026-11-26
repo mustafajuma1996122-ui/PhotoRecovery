@@ -11,6 +11,8 @@ jobs:
       - run: printf '\nandroid.useAndroidX=true\n' >> PhotoRecovery/gradle.properties
       - name: Add missing launcher color
         run: echo '<resources><color name="ic_launcher_background">#0D263D</color></resources>' > PhotoRecovery/app/src/main/res/values/ic_launcher_background.xml
+      - name: Add missing import
+        run: sed -i '/^import android.content.Context/a import android.graphics.BitmapFactory' PhotoRecovery/app/src/main/java/com/mustafa/photorecovery/Restorer.kt
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
