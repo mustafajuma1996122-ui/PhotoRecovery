@@ -7,14 +7,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -o PhotoRecovery_Pro_1.8_JPEG_Preview_Fix_Source.zip
+      - run: unzip -o PhotoRecovery_Pro_1.9_LargeGallery_DarkMode_Source.zip
       - run: printf '\nandroid.useAndroidX=true\n' >> PhotoRecovery/gradle.properties
       - name: Add missing launcher color
         run: echo '<resources><color name="ic_launcher_background">#0D263D</color></resources>' > PhotoRecovery/app/src/main/res/values/ic_launcher_background.xml
-      - name: Add missing import
-        run: sed -i '/^import android.content.Context/a import android.graphics.BitmapFactory' PhotoRecovery/app/src/main/java/com/mustafa/photorecovery/Restorer.kt
-      - name: Fix preview size
-        run: sed -i '/content\.addView(preview,/,/^ *))[[:space:]]*$/c\        content.addView(preview)' PhotoRecovery/app/src/main/java/com/mustafa/photorecovery/MainActivity.kt
+      - name: Fix source code
+        run: |
+          cd PhotoRecovery/app/src/main/java/com/mustafa/photorecovery
+          sed -i '/^import android.content.Context/a import android.graphics.BitmapFactory' Restorer.kt
+          sed -i '/content\.addView(preview,/,/^ *))[[:space:]]*$/c\        content.addView(preview)' MainActivity.kt
+          sed -i 's/\.popupBackground = \(.*\)$/.setPopupBackgroundDrawable(\1)/' MainActivity.kt
+          sed -i 's/ fillViewport = true/ isFillViewport = true/' MainActivity.kt
+          sed -i 's/^\( *\)stretchMode = GridView\.STRETCH_COLUMN_WIDTH/&\n\1isNestedScrollingEnabled = true/' MainActivity.kt
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,6 +30,6 @@ jobs:
         working-directory: PhotoRecovery
       - uses: actions/upload-artifact@v4
         with:
-          name: PhotoRecovery-Pro-1.8-APK
+          name: PhotoRecovery-Pro-1.9-APK
           path: PhotoRecovery/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
